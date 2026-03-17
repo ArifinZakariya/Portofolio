@@ -10,22 +10,38 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
         .handwriting { font-family: 'Caveat', cursive; }
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0a051a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #f43f5e; }
         
-        /* Glassmorphism utility */
         .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .logo-gradient {
-            background: linear-gradient(135deg, #f43f5e 0%, #fbbf24 100%);
+        .admin-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        input:focus, textarea:focus {
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1);
+        }
+        
+        /* Fix for Safari/iOS height issues */
+        .min-h-screen-ios {
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
         }
     </style>
 
@@ -36,19 +52,19 @@
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-[#0a051a] text-white">
+<body class="bg-[#0a051a] text-white selection:bg-rose-500 selection:text-white">
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
         const { useState, useEffect, useRef, useMemo, memo } = React;
         const { motion, AnimatePresence } = window.Motion;
 
-        // Firebase Imports from CDN
+        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Global Firebase Setup - Added Safety Guards to prevent blank screen outside environment
+        // Global Firebase Setup
         let firebaseApp, auth, db;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-portfolio-app';
         
@@ -63,13 +79,11 @@
                 db = getFirestore(firebaseApp);
             }
         } catch (e) {
-            console.error("Firebase Configuration missing or invalid. App running in offline mode.");
+            console.error("Firebase Configuration error. Offline mode active.");
         }
 
-        // Robust Icon Helper - Memoized to prevent unnecessary re-renders
         const Icon = memo(({ name, size = 24, className = "" }) => {
             const iconRef = useRef(null);
-            
             useEffect(() => {
                 if (iconRef.current && window.lucide) {
                     iconRef.current.innerHTML = '';
@@ -80,136 +94,156 @@
                         if (className) i.className = className;
                         iconRef.current.appendChild(i);
                         window.lucide.createIcons({
-                            attrs: {
-                                'stroke-width': 2,
-                                width: size,
-                                height: size
-                            }
+                            attrs: { 'stroke-width': 2, width: size, height: size }
                         });
-                    } catch (err) {
-                        console.warn("Icon failed to render:", name);
-                    }
+                    } catch (err) {}
                 }
             }, [name, size, className]);
-
             return <span ref={iconRef} className="inline-flex items-center justify-center leading-none" />;
         });
 
         // --- SUB-COMPONENTS ---
 
         const PortfolioView = ({ portfolioData, isScrolled, isLoggedInLocal, setView, setShowLoginModal }) => (
-            <div className="relative">
+            <div className="relative min-h-screen">
+                {/* Dynamic Background */}
                 <div className="fixed inset-0 pointer-events-none z-0">
-                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[150px] rounded-full" />
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-rose-600/10 blur-[150px] rounded-full" />
+                    <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[180px] rounded-full" />
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-rose-600/10 blur-[180px] rounded-full" />
                 </div>
 
-                <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-black/40 backdrop-blur-xl border-b border-white/10 py-4' : 'bg-transparent py-8'}`}>
+                <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-black/60 backdrop-blur-xl border-b border-white/5 py-4' : 'bg-transparent py-8'}`}>
                     <div className="container mx-auto px-6 flex justify-between items-center">
-                        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                            <div className="flex flex-col -space-y-1">
-                                <span className="font-extrabold tracking-tighter text-xl uppercase leading-none group-hover:text-rose-500 transition-colors">
-                                    {portfolioData.name || "Portfolio Name"}
-                                </span>
-                            </div>
+                        <div className="group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                            <span className="font-extrabold tracking-tighter text-2xl uppercase leading-none group-hover:text-rose-500 transition-colors">
+                                {portfolioData.name || "Portfolio"}
+                            </span>
                         </div>
-                        <div className="flex items-center gap-6">
-                            <div className="hidden md:flex gap-8 text-[10px] font-bold uppercase tracking-widest">
-                                <a href="#home" className="hover:text-amber-400 transition-colors">Intro</a>
-                                <a href="#skills" className="hover:text-rose-400 transition-colors">Magic</a>
+                        <div className="flex items-center gap-10">
+                            <div className="hidden lg:flex gap-10 text-[11px] font-bold uppercase tracking-[0.2em]">
+                                <a href="#home" className="hover:text-rose-500 transition-colors">Intro</a>
+                                <a href="#skills" className="hover:text-amber-400 transition-colors">Skills</a>
                                 <a href="#experience" className="hover:text-indigo-400 transition-colors">Path</a>
                                 <a href="#contact" className="hover:text-emerald-400 transition-colors">Contact</a>
                             </div>
-                            <button onClick={() => isLoggedInLocal ? setView('admin') : setShowLoginModal(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
+                            <button onClick={() => isLoggedInLocal ? setView('admin') : setShowLoginModal(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-rose-500/50 transition-all group">
                                 <Icon name="Settings" size={18} className="text-rose-400 group-hover:rotate-90 transition-transform" />
                             </button>
                         </div>
                     </div>
                 </nav>
 
-                <header id="home" className="relative h-screen flex items-center pt-20">
+                <header id="home" className="relative min-h-screen flex items-center pt-20">
                     <div className="container mx-auto px-6">
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                            <div className="flex items-center gap-4 mb-6">
-                                <span className="handwriting text-3xl text-amber-400 font-bold italic">Halo dunia!</span>
+                        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+                            <div className="inline-flex items-center gap-3 mb-8 bg-white/5 px-6 py-2 rounded-full border border-white/10">
+                                <span className="handwriting text-2xl text-amber-400 font-bold">Halo, saya {portfolioData.name?.split(' ')[0]}!</span>
                             </div>
-                            <h1 className="text-6xl md:text-[80px] font-black leading-[0.9] tracking-tighter mb-8 uppercase">
-                                BIKIN <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-amber-400">KREASI</span> <br/>YANG OTENTIK.
+                            <h1 className="text-6xl md:text-[90px] font-black leading-[0.85] tracking-tighter mb-10 uppercase">
+                                BIKIN <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-orange-400 to-amber-400">KREASI</span> <br/>YANG OTENTIK.
                             </h1>
-                            <p className="text-lg text-slate-300 max-w-xl mb-6 italic border-l-4 border-rose-500 pl-6 bg-rose-500/5 py-4 rounded-r-2xl font-medium leading-relaxed">
-                                {portfolioData.about}
+                            <p className="text-xl text-slate-300 max-w-2xl mb-12 border-l-4 border-rose-500 pl-8 bg-rose-500/5 py-6 rounded-r-3xl font-medium leading-relaxed italic">
+                                "{portfolioData.about}"
                             </p>
                             
-                            <div className="grid md:grid-cols-2 gap-4 max-w-xl mb-12 p-6 glass rounded-3xl">
-                                <div className="flex items-center gap-3 text-slate-400 text-sm font-semibold">
-                                    <Icon name="Calendar" size={16} className="text-rose-400" />
-                                    <span>Lahir: {portfolioData.dob}</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mb-16">
+                                <div className="p-6 glass rounded-3xl flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center">
+                                        <Icon name="Calendar" size={20} className="text-rose-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Lahir</p>
+                                        <p className="font-bold">{portfolioData.dob}</p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-slate-400 text-sm font-semibold">
-                                    <Icon name="MapPin" size={16} className="text-amber-400" />
-                                    <span>Alamat: {portfolioData.address}</span>
+                                <div className="p-6 glass rounded-3xl flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center">
+                                        <Icon name="MapPin" size={20} className="text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Alamat</p>
+                                        <p className="font-bold truncate">{portfolioData.address}</p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-slate-400 text-sm font-semibold md:col-span-2">
-                                    <Icon name="Languages" size={16} className="text-indigo-400" />
-                                    <span>Bahasa: {portfolioData.languages}</span>
+                                <div className="p-6 glass rounded-3xl flex items-center gap-4 sm:col-span-2 lg:col-span-1">
+                                    <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center">
+                                        <Icon name="Languages" size={20} className="text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Bahasa</p>
+                                        <p className="font-bold">{portfolioData.languages || "Bahasa Indonesia"}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-4">
-                                <a href="#contact" className="px-10 py-5 bg-gradient-to-r from-rose-500 to-orange-500 rounded-2xl font-black text-lg shadow-xl shadow-rose-500/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all">
-                                    Mulai Kolaborasi <Icon name="Sparkles" size={20} />
-                                </a>
-                            </div>
+                            <a href="#contact" className="inline-flex items-center gap-4 px-12 py-6 bg-gradient-to-r from-rose-500 to-orange-500 rounded-2xl font-black text-xl shadow-2xl shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-tight">
+                                Mulai Kolaborasi <Icon name="Sparkles" size={24} />
+                            </a>
                         </motion.div>
                     </div>
                 </header>
 
-                <section id="skills" className="py-32">
+                <section id="skills" className="py-40">
                     <div className="container mx-auto px-6">
-                        <h2 className="text-5xl font-black tracking-tighter mb-16 italic uppercase">Magic Stack <span className="text-rose-500">.</span></h2>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="flex flex-col mb-20">
+                            <h2 className="text-5xl md:text-6xl font-black tracking-tighter italic uppercase mb-4">Magic Stack<span className="text-rose-500">.</span></h2>
+                            <p className="text-slate-400 font-medium text-lg max-w-md">Senjata utama yang saya gunakan untuk mewujudkan ide-ide kreatif.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                             {portfolioData.skills?.map((skill, idx) => (
-                                <div key={skill.id} className="p-8 rounded-[40px] bg-white/5 border border-white/10 backdrop-blur-md hover:border-rose-500/30 transition-all group">
-                                    <div className="flex justify-between items-end h-20 mb-6">
-                                        <div className="h-full w-2 bg-white/10 relative rounded-full overflow-hidden">
-                                            <div className={`absolute bottom-0 w-full bg-gradient-to-t ${skill.color}`} style={{ height: `${skill.level}%` }} />
+                                <motion.div 
+                                    whileHover={{ y: -10 }}
+                                    key={skill.id} 
+                                    className="p-10 rounded-[45px] bg-white/5 border border-white/10 backdrop-blur-md hover:border-rose-500/30 transition-all group"
+                                >
+                                    <div className="flex justify-between items-end h-24 mb-8">
+                                        <div className="h-full w-2.5 bg-white/10 relative rounded-full overflow-hidden">
+                                            <motion.div 
+                                                initial={{ height: 0 }}
+                                                whileInView={{ height: `${skill.level}%` }}
+                                                transition={{ duration: 1.5, ease: "easeOut" }}
+                                                className={`absolute bottom-0 w-full bg-gradient-to-t ${skill.color || 'from-rose-500 to-orange-500'}`} 
+                                            />
                                         </div>
-                                        <span className="text-4xl font-black text-white/10 group-hover:text-white/20 transition-colors">0{idx+1}</span>
+                                        <span className="text-5xl font-black text-white/5 group-hover:text-white/10 transition-colors tracking-tighter">0{idx+1}</span>
                                     </div>
-                                    <h3 className="text-xl font-bold uppercase italic">{skill.name}</h3>
-                                </div>
+                                    <h3 className="text-2xl font-bold uppercase italic tracking-tight">{skill.name}</h3>
+                                    <p className="text-slate-500 text-sm font-bold mt-1 uppercase tracking-widest">{skill.level}% Mastery</p>
+                                </motion.div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                <section id="experience" className="py-32 bg-white/5">
+                <section id="experience" className="py-40 bg-white/[0.02]">
                     <div className="container mx-auto px-6">
-                        <div className="grid md:grid-cols-2 gap-20">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-32">
+                            {/* Work Path */}
                             <div>
-                                <h2 className="text-5xl font-black mb-16 italic uppercase tracking-tighter underline decoration-rose-500 underline-offset-8">Work Path</h2>
-                                <div className="space-y-12">
+                                <h2 className="text-5xl font-black mb-20 italic uppercase tracking-tighter underline decoration-rose-500 decoration-8 underline-offset-[12px]">Work Path</h2>
+                                <div className="space-y-16">
                                     {portfolioData.experience?.map((exp) => (
-                                        <div key={exp.id} className="relative pl-10 border-l-4 border-white/5">
-                                            <div className="absolute -left-[14px] top-0 w-6 h-6 bg-rose-500 rounded-xl rotate-45" />
-                                            <span className="text-xs font-black text-rose-500 uppercase tracking-widest mb-2 block">{exp.period}</span>
-                                            <h3 className="text-3xl font-black uppercase italic tracking-tight">{exp.pos}</h3>
-                                            <p className="text-amber-400 font-bold mb-4 handwriting text-2xl">{exp.comp}</p>
-                                            <p className="text-slate-400 font-medium leading-relaxed">{exp.desc}</p>
+                                        <div key={exp.id} className="relative pl-12 border-l-2 border-white/10">
+                                            <div className="absolute -left-[9px] top-0 w-4 h-4 bg-rose-500 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+                                            <span className="text-xs font-black text-rose-500 uppercase tracking-[0.3em] mb-3 block">{exp.period}</span>
+                                            <h3 className="text-4xl font-black uppercase italic tracking-tighter mb-1">{exp.pos}</h3>
+                                            <p className="text-amber-400 font-bold mb-6 handwriting text-2xl tracking-wide">{exp.comp}</p>
+                                            <p className="text-slate-400 font-medium leading-relaxed text-lg">{exp.desc}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
+                            {/* Active In */}
                             <div>
-                                <h2 className="text-5xl font-black mb-16 italic uppercase tracking-tighter underline decoration-indigo-500 underline-offset-8">Active In</h2>
-                                <div className="space-y-12">
+                                <h2 className="text-5xl font-black mb-20 italic uppercase tracking-tighter underline decoration-indigo-500 decoration-8 underline-offset-[12px]">Active In</h2>
+                                <div className="space-y-16">
                                     {portfolioData.organizations?.map((org) => (
-                                        <div key={org.id} className="relative pl-10 border-l-4 border-white/5">
-                                            <div className="absolute -left-[14px] top-0 w-6 h-6 bg-indigo-500 rounded-xl rotate-45" />
-                                            <span className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2 block">{org.period}</span>
-                                            <h3 className="text-3xl font-black uppercase italic tracking-tight">{org.role}</h3>
-                                            <p className="text-emerald-400 font-bold mb-4 handwriting text-2xl">{org.name}</p>
-                                            <p className="text-slate-400 font-medium leading-relaxed">{org.desc}</p>
+                                        <div key={org.id} className="relative pl-12 border-l-2 border-white/10">
+                                            <div className="absolute -left-[9px] top-0 w-4 h-4 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
+                                            <span className="text-xs font-black text-indigo-500 uppercase tracking-[0.3em] mb-3 block">{org.period}</span>
+                                            <h3 className="text-4xl font-black uppercase italic tracking-tighter mb-1">{org.role}</h3>
+                                            <p className="text-emerald-400 font-bold mb-6 handwriting text-2xl tracking-wide">{org.name}</p>
+                                            <p className="text-slate-400 font-medium leading-relaxed text-lg">{org.desc}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -218,53 +252,62 @@
                     </div>
                 </section>
 
-                <section className="py-32">
+                <section className="py-40">
                     <div className="container mx-auto px-6">
-                        <h2 className="text-5xl font-black mb-16 italic uppercase tracking-tighter text-center">Sertifikasi <span className="text-rose-500">&</span> Arsip</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="text-center max-w-2xl mx-auto mb-20">
+                            <h2 className="text-5xl font-black italic uppercase tracking-tighter mb-4">Sertifikasi <span className="text-rose-500">&</span> Arsip</h2>
+                            <p className="text-slate-400 font-medium">Validasi resmi dari kemampuan dan pengalaman profesional saya.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {portfolioData.certificates?.map((cert) => (
-                                <div key={cert.id} className="p-8 bg-slate-950/50 border border-white/10 rounded-[40px] hover:scale-105 transition-all">
-                                    <Icon name="Award" className="text-amber-500 mb-6" size={40} />
-                                    <h3 className="text-2xl font-black mb-2 uppercase italic">{cert.title}</h3>
-                                    <p className="text-slate-400 font-bold text-sm uppercase mb-8">{cert.issuer}</p>
+                                <motion.div 
+                                    whileHover={{ scale: 1.02 }}
+                                    key={cert.id} 
+                                    className="p-10 bg-slate-900/40 border border-white/5 rounded-[50px] flex flex-col items-center text-center group transition-colors hover:border-amber-500/20"
+                                >
+                                    <div className="w-20 h-20 bg-amber-500/10 rounded-[30px] flex items-center justify-center mb-8 group-hover:rotate-12 transition-transform">
+                                        <Icon name="Award" className="text-amber-500" size={40} />
+                                    </div>
+                                    <h3 className="text-2xl font-black mb-2 uppercase italic tracking-tight">{cert.title}</h3>
+                                    <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">{cert.issuer}</p>
                                     {cert.url && (
-                                        <a href={cert.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-rose-400 font-black text-xs uppercase tracking-widest hover:text-white transition-colors">
+                                        <a href={cert.url} target="_blank" rel="noreferrer" className="mt-auto inline-flex items-center gap-3 px-8 py-3 bg-white/5 border border-white/10 rounded-2xl text-rose-400 font-black text-xs uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all">
                                             Buka PDF <Icon name="ExternalLink" size={16} />
                                         </a>
                                     )}
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                <section id="contact" className="py-32 bg-gradient-to-b from-transparent to-rose-950/20">
+                <section id="contact" className="py-40 bg-gradient-to-t from-rose-950/20 to-transparent">
                     <div className="container mx-auto px-6 text-center">
-                        <h2 className="text-7xl md:text-[100px] font-black italic tracking-tighter uppercase mb-12">Let's <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-amber-400">Talk</span></h2>
-                        <div className="grid md:grid-cols-3 gap-10 max-w-5xl mx-auto">
+                        <h2 className="text-8xl md:text-[120px] font-black italic tracking-[0.05em] uppercase mb-20">Let's <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-amber-400">Talk</span></h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                             {/* Instagram */}
-                            <a href={portfolioData.contact?.instagram} target="_blank" rel="noreferrer" className="p-10 glass rounded-[50px] group hover:border-rose-500 transition-all block">
-                                <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <Icon name="Instagram" className="text-rose-500" size={40} />
+                            <a href={portfolioData.contact?.instagram} target="_blank" rel="noreferrer" className="p-12 glass rounded-[60px] group hover:border-rose-500 transition-all block">
+                                <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
+                                    <Icon name="Instagram" className="text-rose-500" size={44} />
                                 </div>
-                                <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Instagram</p>
-                                <p className="text-xl font-bold italic truncate">@{portfolioData.contact?.instagram?.split('/').filter(p => p).pop() || 'Username'}</p>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.4em] mb-2">Instagram</p>
+                                <p className="text-2xl font-black italic truncate">@{portfolioData.contact?.instagram?.split('/').filter(p=>p).pop() || 'User'}</p>
                             </a>
                             {/* WhatsApp */}
-                            <a href={`https://wa.me/${portfolioData.contact?.whatsapp?.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="p-10 glass rounded-[50px] group hover:border-emerald-500 transition-all block">
-                                <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <Icon name="MessageCircle" className="text-emerald-500" size={40} />
+                            <a href={`https://wa.me/${portfolioData.contact?.whatsapp?.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="p-12 glass rounded-[60px] group hover:border-emerald-500 transition-all block">
+                                <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
+                                    <Icon name="MessageCircle" className="text-emerald-500" size={44} />
                                 </div>
-                                <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">WhatsApp</p>
-                                <p className="text-xl font-bold italic">{portfolioData.contact?.whatsapp || 'Number'}</p>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.4em] mb-2">WhatsApp</p>
+                                <p className="text-2xl font-black italic">{portfolioData.contact?.whatsapp || 'Number'}</p>
                             </a>
                             {/* LinkedIn */}
-                            <a href={portfolioData.contact?.linkedin} target="_blank" rel="noreferrer" className="p-10 glass rounded-[50px] group hover:border-indigo-500 transition-all block">
-                                <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <Icon name="Linkedin" className="text-indigo-500" size={40} />
+                            <a href={portfolioData.contact?.linkedin} target="_blank" rel="noreferrer" className="p-12 glass rounded-[60px] group hover:border-indigo-500 transition-all block">
+                                <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform">
+                                    <Icon name="Linkedin" className="text-indigo-500" size={44} />
                                 </div>
-                                <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">LinkedIn</p>
-                                <p className="text-xl font-bold italic truncate">Connect Profile</p>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.4em] mb-2">LinkedIn</p>
+                                <p className="text-2xl font-black italic truncate">Connect Profile</p>
                             </a>
                         </div>
                     </div>
@@ -273,142 +316,257 @@
         );
 
         const AdminPanel = ({ portfolioData, setView, saveToCloud, saveStatus, setIsLoggedInLocal, updateData, updateContact, addItem, removeItem, uploading, handlePdfUpload }) => (
-            <div className="min-h-screen bg-slate-50 text-slate-900 flex">
-                <aside className="w-80 bg-slate-900 text-white h-screen sticky top-0 p-10 flex flex-col">
+            <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col lg:flex-row">
+                {/* Sidebar */}
+                <aside className="w-full lg:w-80 bg-slate-900 text-white lg:h-screen lg:sticky top-0 p-8 flex flex-col border-r border-white/5">
                     <div className="mb-12">
-                        <h2 className="text-2xl font-black italic tracking-tighter uppercase">Admin Portal</h2>
-                        <p className="handwriting text-xl text-amber-400 font-bold">Cloud Sync Active</p>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center">
+                                <Icon name="Shield" size={16} />
+                            </div>
+                            <h2 className="text-xl font-black italic tracking-tighter uppercase">Admin Portal</h2>
+                        </div>
+                        <p className="handwriting text-amber-400 font-bold text-lg">Sync Status: Active</p>
                     </div>
-                    <nav className="flex-1 space-y-4">
-                        <button className="w-full flex items-center gap-4 p-4 bg-white/10 rounded-2xl font-bold uppercase text-[10px] tracking-widest">
-                            <Icon name="Layout" size={18} className="text-rose-400" /> Dashboard
+                    
+                    <nav className="flex-1 space-y-2">
+                        <button className="w-full flex items-center gap-4 p-4 bg-rose-500/10 text-rose-400 rounded-2xl font-bold uppercase text-[10px] tracking-widest transition-all">
+                            <Icon name="Layout" size={18} /> Dashboard
                         </button>
                     </nav>
-                    <div className="space-y-4">
-                        <button onClick={saveToCloud} disabled={saveStatus === 'saving'} className="w-full p-5 bg-gradient-to-r from-rose-500 to-amber-500 text-white rounded-3xl font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
-                            {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'} <Icon name="Save" size={20} />
+
+                    <div className="mt-12 space-y-3">
+                        <button onClick={saveToCloud} disabled={saveStatus === 'saving'} className={`w-full p-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 ${saveStatus === 'saving' ? 'bg-slate-700 cursor-not-allowed' : 'bg-gradient-to-r from-rose-500 to-orange-500 text-white'}`}>
+                            {saveStatus === 'saving' ? 'Menyimpan...' : (saveStatus === 'success' ? 'Berhasil!' : 'Simpan Cloud')} 
+                            <Icon name={saveStatus === 'saving' ? 'Loader2' : 'Cloud'} size={20} className={saveStatus === 'saving' ? 'animate-spin' : ''} />
                         </button>
-                        <button onClick={() => setView('portfolio')} className="w-full p-5 bg-white/5 border border-white/10 rounded-3xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3">
-                            <Icon name="Eye" size={18} /> View Site
+                        <button onClick={() => setView('portfolio')} className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-white/10 transition-all">
+                            <Icon name="Eye" size={18} /> Lihat Situs
                         </button>
-                        <button onClick={() => { setIsLoggedInLocal(false); setView('portfolio'); }} className="w-full p-5 text-rose-500 font-black flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest">
+                        <button onClick={() => { setIsLoggedInLocal(false); setView('portfolio'); }} className="w-full p-5 text-rose-500 hover:bg-rose-500/5 rounded-2xl font-black flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest transition-all">
                             <Icon name="LogOut" size={18} /> Logout
                         </button>
                     </div>
                 </aside>
 
-                <main className="flex-1 p-16 overflow-y-auto max-h-screen">
-                    <div className="max-w-4xl mx-auto space-y-12 pb-20">
-                        <h1 className="text-5xl font-black tracking-tight uppercase italic underline decoration-rose-500 underline-offset-8">Edit Content</h1>
+                {/* Main Content */}
+                <main className="flex-1 p-6 lg:p-16 overflow-y-auto bg-[#f1f5f9]">
+                    <div className="max-w-4xl mx-auto space-y-10 pb-20">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                            <div>
+                                <h1 className="text-5xl font-black tracking-tight uppercase italic mb-2">Edit Content</h1>
+                                <p className="text-slate-500 font-medium">Kelola informasi portofolio Anda secara real-time.</p>
+                            </div>
+                        </div>
 
-                        {/* Identity Section */}
-                        <section className="bg-white p-12 rounded-[50px] shadow-sm border border-slate-200">
-                            <h2 className="text-xl font-black mb-8 flex items-center gap-3 uppercase text-rose-500">
-                                <Icon name="User" /> Identity
+                        {/* Identity */}
+                        <section className="admin-card p-10 rounded-[40px]">
+                            <h2 className="text-lg font-black mb-8 flex items-center gap-3 uppercase text-rose-500">
+                                <Icon name="User" size={20} /> Identitas Diri
                             </h2>
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Full Name</label>
-                                    <input className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-rose-500 font-bold outline-none" value={portfolioData.name || ""} onChange={e => updateData('name', e.target.value)} />
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Nama Lengkap</label>
+                                    <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-rose-500 font-bold outline-none transition-all" value={portfolioData.name || ""} onChange={e => updateData('name', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Birth Date</label>
-                                    <input className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-rose-500 font-bold outline-none" value={portfolioData.dob || ""} onChange={e => updateData('dob', e.target.value)} />
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tanggal Lahir</label>
+                                    <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-rose-500 font-bold outline-none transition-all" value={portfolioData.dob || ""} onChange={e => updateData('dob', e.target.value)} />
                                 </div>
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Current Address</label>
-                                    <input className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-rose-500 font-bold outline-none" value={portfolioData.address || ""} onChange={e => updateData('address', e.target.value)} />
+                                <div className="col-span-1 md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Alamat Tinggal</label>
+                                    <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-rose-500 font-bold outline-none transition-all" value={portfolioData.address || ""} onChange={e => updateData('address', e.target.value)} />
                                 </div>
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Languages Spoken</label>
-                                    <input className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-rose-500 font-bold outline-none" value={portfolioData.languages || ""} onChange={e => updateData('languages', e.target.value)} />
+                                <div className="col-span-1 md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bahasa yang Dikuasai</label>
+                                    <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-rose-500 font-bold outline-none transition-all" value={portfolioData.languages || ""} onChange={e => updateData('languages', e.target.value)} placeholder="Contoh: Indonesia, English" />
                                 </div>
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">About Me / Bio</label>
-                                    <textarea rows="3" className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-rose-500 outline-none" value={portfolioData.about || ""} onChange={e => updateData('about', e.target.value)} />
+                                <div className="col-span-1 md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tentang Saya / Bio</label>
+                                    <textarea rows="4" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:border-rose-500 outline-none font-medium transition-all" value={portfolioData.about || ""} onChange={e => updateData('about', e.target.value)} />
                                 </div>
                             </div>
                         </section>
 
-                        {/* Social Channels Section */}
-                        <section className="bg-white p-12 rounded-[50px] shadow-sm border border-slate-200">
-                            <h2 className="text-xl font-black mb-8 flex items-center gap-3 uppercase text-emerald-500">
-                                <Icon name="Share2" /> Social Channels
+                        {/* Social Channels */}
+                        <section className="admin-card p-10 rounded-[40px]">
+                            <h2 className="text-lg font-black mb-8 flex items-center gap-3 uppercase text-emerald-600">
+                                <Icon name="Share2" size={20} /> Media Sosial & Kontak
                             </h2>
-                            <div className="grid grid-cols-1 gap-6">
+                            <div className="space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">WhatsApp Number</label>
-                                    <div className="flex gap-2">
-                                        <div className="bg-slate-100 p-3 rounded-xl flex items-center"><Icon name="MessageCircle" size={18} /></div>
-                                        <input className="flex-1 p-3 bg-slate-50 rounded-xl border-2 border-slate-50 focus:border-emerald-500 outline-none font-bold" value={portfolioData.contact?.whatsapp || ""} onChange={e => updateContact('whatsapp', e.target.value)} placeholder="Contoh: +628123456789" />
+                                    <div className="relative group">
+                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="MessageCircle" size={18} /></div>
+                                        <input className="w-full p-4 pl-14 bg-slate-50 border border-slate-200 rounded-2xl focus:border-emerald-500 outline-none font-bold" value={portfolioData.contact?.whatsapp || ""} onChange={e => updateContact('whatsapp', e.target.value)} placeholder="+628..." />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Instagram URL</label>
-                                    <div className="flex gap-2">
-                                        <div className="bg-slate-100 p-3 rounded-xl flex items-center"><Icon name="Instagram" size={18} /></div>
-                                        <input className="flex-1 p-3 bg-slate-50 rounded-xl border-2 border-slate-50 focus:border-rose-500 outline-none font-bold" value={portfolioData.contact?.instagram || ""} onChange={e => updateContact('instagram', e.target.value)} placeholder="https://instagram.com/username" />
+                                    <div className="relative group">
+                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="Instagram" size={18} /></div>
+                                        <input className="w-full p-4 pl-14 bg-slate-50 border border-slate-200 rounded-2xl focus:border-rose-500 outline-none font-bold" value={portfolioData.contact?.instagram || ""} onChange={e => updateContact('instagram', e.target.value)} placeholder="https://instagram.com/..." />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">LinkedIn URL</label>
-                                    <div className="flex gap-2">
-                                        <div className="bg-slate-100 p-3 rounded-xl flex items-center"><Icon name="Linkedin" size={18} /></div>
-                                        <input className="flex-1 p-3 bg-slate-50 rounded-xl border-2 border-slate-50 focus:border-indigo-500 outline-none font-bold" value={portfolioData.contact?.linkedin || ""} onChange={e => updateContact('linkedin', e.target.value)} placeholder="https://linkedin.com/in/username" />
+                                    <div className="relative group">
+                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="Linkedin" size={18} /></div>
+                                        <input className="w-full p-4 pl-14 bg-slate-50 border border-slate-200 rounded-2xl focus:border-indigo-500 outline-none font-bold" value={portfolioData.contact?.linkedin || ""} onChange={e => updateContact('linkedin', e.target.value)} placeholder="https://linkedin.com/in/..." />
                                     </div>
                                 </div>
                             </div>
                         </section>
 
-                        {/* Other Sections (Experience, Organizations, etc.) */}
-                        <section className="bg-white p-12 rounded-[50px] shadow-sm border border-slate-200">
+                        {/* Work Experience */}
+                        <section className="admin-card p-10 rounded-[40px]">
                             <div className="flex justify-between items-center mb-10">
-                                <h2 className="text-xl font-black uppercase text-rose-500 flex items-center gap-3">
-                                    <Icon name="Briefcase" /> Work Experience
-                                </h2>
-                                <button onClick={() => addItem('experience', { pos: "New Position", comp: "New Company", period: "2024 - Present", desc: "Job description here" })} className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest flex items-center gap-2">
-                                    <Icon name="Plus" size={14} /> Add New
+                                <h2 className="text-lg font-black uppercase text-rose-500 flex items-center gap-3"><Icon name="Briefcase" size={20} /> Pengalaman Kerja</h2>
+                                <button onClick={() => addItem('experience', { pos: "New Position", comp: "New Company", period: "2024", desc: "Description" })} className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-rose-500 transition-all">
+                                    <Icon name="Plus" size={14} /> Tambah
                                 </button>
                             </div>
-                            <div className="space-y-8">
+                            <div className="space-y-6">
                                 {(portfolioData.experience || []).map((exp, idx) => (
-                                    <div key={exp.id} className="p-8 bg-slate-50 rounded-3xl border border-slate-100 relative group">
-                                        <button onClick={() => removeItem('experience', exp.id)} className="absolute top-6 right-6 p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                                            <Icon name="Trash2" size={18} />
-                                        </button>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Position</label>
-                                                <input className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-rose-500 font-bold" value={exp.pos} onChange={e => {
-                                                    const news = [...portfolioData.experience];
-                                                    news[idx].pos = e.target.value;
-                                                    updateData('experience', news);
+                                    <div key={exp.id} className="p-8 bg-slate-50 rounded-3xl border border-slate-200 relative">
+                                        <button onClick={() => removeItem('experience', exp.id)} className="absolute top-6 right-6 p-2 text-rose-500 hover:bg-rose-100 rounded-xl transition-all"><Icon name="Trash2" size={18} /></button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Posisi</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white font-bold" value={exp.pos} onChange={e => {
+                                                    const news = [...portfolioData.experience]; news[idx].pos = e.target.value; updateData('experience', news);
                                                 }} />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Company</label>
-                                                <input className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-rose-500 font-bold" value={exp.comp} onChange={e => {
-                                                    const news = [...portfolioData.experience];
-                                                    news[idx].comp = e.target.value;
-                                                    updateData('experience', news);
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Perusahaan</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white font-bold" value={exp.comp} onChange={e => {
+                                                    const news = [...portfolioData.experience]; news[idx].comp = e.target.value; updateData('experience', news);
                                                 }} />
                                             </div>
-                                            <div className="col-span-2 space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Period</label>
-                                                <input className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-rose-500 font-bold" value={exp.period} onChange={e => {
-                                                    const news = [...portfolioData.experience];
-                                                    news[idx].period = e.target.value;
-                                                    updateData('experience', news);
+                                            <div className="col-span-full space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Periode</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white" value={exp.period} onChange={e => {
+                                                    const news = [...portfolioData.experience]; news[idx].period = e.target.value; updateData('experience', news);
                                                 }} />
                                             </div>
-                                            <div className="col-span-2 space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Description</label>
-                                                <textarea rows="2" className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-rose-500" value={exp.desc} onChange={e => {
-                                                    const news = [...portfolioData.experience];
-                                                    news[idx].desc = e.target.value;
-                                                    updateData('experience', news);
+                                            <div className="col-span-full space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Deskripsi Tugas</label>
+                                                <textarea className="w-full p-3 rounded-xl border bg-white" rows="2" value={exp.desc} onChange={e => {
+                                                    const news = [...portfolioData.experience]; news[idx].desc = e.target.value; updateData('experience', news);
                                                 }} />
                                             </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!portfolioData.experience || portfolioData.experience.length === 0) && <div className="text-center py-10 text-slate-400 font-medium bg-slate-50 border-2 border-dashed rounded-3xl">Belum ada data pengalaman kerja.</div>}
+                            </div>
+                        </section>
+
+                        {/* Organizations */}
+                        <section className="admin-card p-10 rounded-[40px]">
+                            <div className="flex justify-between items-center mb-10">
+                                <h2 className="text-lg font-black uppercase text-indigo-600 flex items-center gap-3"><Icon name="Users" size={20} /> Pengalaman Organisasi</h2>
+                                <button onClick={() => addItem('organizations', { role: "Member", name: "Org Name", period: "2024", desc: "Short description" })} className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-500 transition-all">
+                                    <Icon name="Plus" size={14} /> Tambah
+                                </button>
+                            </div>
+                            <div className="space-y-6">
+                                {(portfolioData.organizations || []).map((org, idx) => (
+                                    <div key={org.id} className="p-8 bg-slate-50 rounded-3xl border border-slate-200 relative">
+                                        <button onClick={() => removeItem('organizations', org.id)} className="absolute top-6 right-6 p-2 text-rose-500 hover:bg-rose-100 rounded-xl transition-all"><Icon name="Trash2" size={18} /></button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Jabatan</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white font-bold" value={org.role} onChange={e => {
+                                                    const news = [...portfolioData.organizations]; news[idx].role = e.target.value; updateData('organizations', news);
+                                                }} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Organisasi</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white font-bold" value={org.name} onChange={e => {
+                                                    const news = [...portfolioData.organizations]; news[idx].name = e.target.value; updateData('organizations', news);
+                                                }} />
+                                            </div>
+                                            <div className="col-span-full space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Periode</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white" value={org.period} onChange={e => {
+                                                    const news = [...portfolioData.organizations]; news[idx].period = e.target.value; updateData('organizations', news);
+                                                }} />
+                                            </div>
+                                            <div className="col-span-full space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Deskripsi Singkat</label>
+                                                <textarea className="w-full p-3 rounded-xl border bg-white" rows="2" value={org.desc} onChange={e => {
+                                                    const news = [...portfolioData.organizations]; news[idx].desc = e.target.value; updateData('organizations', news);
+                                                }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Skills */}
+                        <section className="admin-card p-10 rounded-[40px]">
+                            <div className="flex justify-between items-center mb-10">
+                                <h2 className="text-lg font-black uppercase text-rose-500 flex items-center gap-3"><Icon name="Zap" size={20} /> Skill & Keahlian</h2>
+                                <button onClick={() => addItem('skills', { name: "New Skill", level: 80, color: "from-rose-500 to-orange-500" })} className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-rose-500 transition-all">
+                                    <Icon name="Plus" size={14} /> Tambah
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {(portfolioData.skills || []).map((skill, idx) => (
+                                    <div key={skill.id} className="flex gap-3 items-center p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                                        <div className="flex-1 space-y-1">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Nama Skill</label>
+                                            <input className="w-full p-3 rounded-xl border bg-white outline-none focus:border-rose-500 font-bold" value={skill.name} onChange={e => {
+                                                const news = [...portfolioData.skills]; news[idx].name = e.target.value; updateData('skills', news);
+                                            }} />
+                                        </div>
+                                        <div className="w-24 space-y-1">
+                                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center block">%</label>
+                                            <input type="number" className="w-full p-3 rounded-xl border bg-white text-center font-bold" value={skill.level} onChange={e => {
+                                                const news = [...portfolioData.skills]; news[idx].level = parseInt(e.target.value) || 0; updateData('skills', news);
+                                            }} />
+                                        </div>
+                                        <button onClick={() => removeItem('skills', skill.id)} className="p-3 text-rose-500 hover:bg-rose-100 rounded-xl transition-all mt-4"><Icon name="Trash2" size={18} /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Certificates */}
+                        <section className="admin-card p-10 rounded-[40px]">
+                            <div className="flex justify-between items-center mb-10">
+                                <h2 className="text-lg font-black uppercase text-amber-600 flex items-center gap-3"><Icon name="Award" size={20} /> Sertifikat & Penghargaan</h2>
+                                <button onClick={() => addItem('certificates', { title: "Title", issuer: "Issuer", url: null })} className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black rounded-xl uppercase tracking-widest flex items-center gap-2 hover:bg-amber-500 transition-all">
+                                    <Icon name="Plus" size={14} /> Tambah
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-6">
+                                {(portfolioData.certificates || []).map((cert, idx) => (
+                                    <div key={cert.id} className="p-8 bg-slate-50 rounded-3xl border border-slate-200 relative">
+                                        <button onClick={() => removeItem('certificates', cert.id)} className="absolute top-6 right-6 p-2 text-rose-500 hover:bg-rose-100 rounded-xl transition-all"><Icon name="Trash2" size={18} /></button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Nama Sertifikat</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white font-bold" value={cert.title} onChange={e => {
+                                                    const news = [...portfolioData.certificates]; news[idx].title = e.target.value; updateData('certificates', news);
+                                                }} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Penerbit</label>
+                                                <input className="w-full p-3 rounded-xl border bg-white font-bold" value={cert.issuer} onChange={e => {
+                                                    const news = [...portfolioData.certificates]; news[idx].issuer = e.target.value; updateData('certificates', news);
+                                                }} />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <label className={`flex-1 flex items-center justify-center gap-3 p-6 bg-white border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:border-amber-500 transition-all font-black text-xs uppercase tracking-widest ${uploading === cert.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                {uploading === cert.id ? <Icon name="Loader2" className="animate-spin text-amber-500" size={20} /> : <Icon name="UploadCloud" className="text-slate-400" size={20} />}
+                                                {cert.url ? "Ganti File PDF" : "Upload Dokumen (PDF)"}
+                                                <input type="file" accept=".pdf" className="hidden" onChange={e => handlePdfUpload(e, cert.id)} />
+                                            </label>
+                                            {cert.url && <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 flex items-center gap-2 font-bold text-xs"><Icon name="CheckCircle" size={16} /> File Siap</div>}
                                         </div>
                                     </div>
                                 ))}
@@ -434,21 +592,13 @@
             const [supabaseClient, setSupabaseClient] = useState(null);
 
             const [portfolioData, setPortfolioData] = useState({
-                name: "Nama Anda",
-                dob: "01 Januari 2000",
-                address: "Jakarta, Indonesia",
-                languages: "Bahasa Indonesia, English",
-                role: "Full Stack Developer",
-                about: "Saya percaya bahwa teknologi haruslah indah dan manusiawi. Saya menggabungkan logika kode dengan estetika visual.",
-                contact: {
-                    whatsapp: "+628123456789",
-                    instagram: "https://instagram.com/",
-                    linkedin: "https://linkedin.com/in/"
-                },
-                skills: [
-                    { name: "React JS", level: 90, color: "from-blue-400 to-indigo-500", id: 1 },
-                    { name: "UI Design", level: 85, color: "from-pink-400 to-rose-500", id: 2 }
-                ],
+                name: "Your Name",
+                dob: "01 Jan 2000",
+                address: "City, Country",
+                languages: "Bahasa, English",
+                about: "Bio description goes here.",
+                contact: { whatsapp: "", instagram: "", linkedin: "" },
+                skills: [],
                 experience: [],
                 organizations: [],
                 certificates: []
@@ -461,28 +611,19 @@
                 script.onload = () => {
                     const supabaseUrl = 'https://pxneghnsllquafsmlrfh.supabase.co';
                     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4bmVnaG5zbGxxdWFmc21scmZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MTU3NjEsImV4cCI6MjA4OTI5MTc2MX0.VLfu04NPZ9b5yCVOdOW1fz3X0HWqnTCc4TM4yYeO9Nk';
-                    if (window.supabase) {
-                        setSupabaseClient(window.supabase.createClient(supabaseUrl, supabaseAnonKey));
-                    }
+                    if (window.supabase) setSupabaseClient(window.supabase.createClient(supabaseUrl, supabaseAnonKey));
                 };
                 document.head.appendChild(script);
             }, []);
 
             useEffect(() => {
-                if (!auth) {
-                    setLoading(false);
-                    return;
-                }
+                if (!auth) { setLoading(false); return; }
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) {
-                        console.error("Auth init error", e);
-                    }
+                        } else { await signInAnonymously(auth); }
+                    } catch (e) {}
                 };
                 initAuth();
                 const unsubscribeAuth = onAuthStateChanged(auth, setUser);
@@ -490,20 +631,12 @@
             }, []);
 
             useEffect(() => {
-                if (!user || !db) {
-                    if (!db) setLoading(false);
-                    return;
-                }
+                if (!user || !db) { if (!db) setLoading(false); return; }
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'portfolio', 'content');
                 const unsubscribeData = onSnapshot(docRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        setPortfolioData(prev => ({ ...prev, ...docSnap.data() }));
-                    }
+                    if (docSnap.exists()) setPortfolioData(prev => ({ ...prev, ...docSnap.data() }));
                     setLoading(false);
-                }, (err) => {
-                    console.error("Firestore error", err);
-                    setLoading(false);
-                });
+                }, () => setLoading(false));
 
                 const handleScroll = () => setIsScrolled(window.scrollY > 50);
                 window.addEventListener('scroll', handleScroll);
@@ -513,115 +646,66 @@
                 };
             }, [user]);
 
-            const handleLogin = (e) => {
-                e.preventDefault();
-                if (loginPassword === "admin123") {
-                    setIsLoggedInLocal(true);
-                    setShowLoginModal(false);
-                    setView('admin');
-                } else {
-                    alert("Password salah! (Hint: admin123)");
-                }
-            };
-
             const updateData = (key, value) => setPortfolioData(prev => ({ ...prev, [key]: value }));
             const updateContact = (key, value) => setPortfolioData(prev => ({ ...prev, contact: { ...prev.contact, [key]: value } }));
-
-            const addItem = (section, newItem) => {
-                setPortfolioData(prev => ({
-                    ...prev,
-                    [section]: [...(prev[section] || []), { ...newItem, id: Date.now() }]
-                }));
-            };
-
-            const removeItem = (section, id) => {
-                setPortfolioData(prev => ({
-                    ...prev,
-                    [section]: (prev[section] || []).filter(item => item.id !== id)
-                }));
-            };
+            const addItem = (section, newItem) => setPortfolioData(prev => ({ ...prev, [section]: [...(prev[section] || []), { ...newItem, id: Date.now() }] }));
+            const removeItem = (section, id) => setPortfolioData(prev => ({ ...prev, [section]: (prev[section] || []).filter(item => item.id !== id) }));
 
             const saveToCloud = async () => {
-                if (!user || !db) {
-                    alert("Penyimpanan cloud tidak tersedia tanpa konfigurasi Firebase.");
-                    return;
-                }
+                if (!user || !db) return;
                 setSaveStatus('saving');
                 try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'portfolio', 'content');
-                    await setDoc(docRef, portfolioData);
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'portfolio', 'content'), portfolioData);
                     setSaveStatus('success');
                     setTimeout(() => setSaveStatus(null), 2000);
-                } catch (error) {
-                    console.error("Save failed", error);
-                    setSaveStatus('error');
-                }
+                } catch (error) { setSaveStatus('error'); }
             };
 
             const handlePdfUpload = async (e, certId) => {
                 if (!supabaseClient) return;
                 const file = e.target.files[0];
-                if (!file || file.type !== 'application/pdf') {
-                    alert("Harap pilih file PDF.");
-                    return;
-                }
+                if (!file || file.type !== 'application/pdf') return alert("Pilih PDF.");
                 setUploading(certId);
                 try {
                     const fileName = `${Date.now()}-${certId}.pdf`;
-                    const { data, error } = await supabaseClient.storage.from('certificates').upload(`pdfs/${fileName}`, file);
+                    const { error } = await supabaseClient.storage.from('certificates').upload(`pdfs/${fileName}`, file);
                     if (error) throw error;
                     const { data: { publicUrl } } = supabaseClient.storage.from('certificates').getPublicUrl(`pdfs/${fileName}`);
                     const newCerts = portfolioData.certificates.map(c => c.id === certId ? { ...c, url: publicUrl } : c);
                     updateData('certificates', newCerts);
-                } catch (error) {
-                    console.error("Upload failed", error);
-                } finally { setUploading(null); }
+                } catch (error) {} finally { setUploading(null); }
             };
 
             if (loading) return (
                 <div className="min-h-screen bg-[#0a051a] flex items-center justify-center">
-                    <Icon name="Loader2" className="animate-spin text-rose-500" size={48} />
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                        <Icon name="Loader2" className="text-rose-500" size={64} />
+                    </motion.div>
                 </div>
             );
 
             return (
-                <div className="min-h-screen overflow-x-hidden">
+                <div className="min-h-screen-ios overflow-x-hidden selection:bg-rose-500/30 selection:text-white">
                     {view === 'portfolio' ? (
-                        <PortfolioView 
-                            portfolioData={portfolioData} 
-                            isScrolled={isScrolled} 
-                            isLoggedInLocal={isLoggedInLocal} 
-                            setView={setView} 
-                            setShowLoginModal={setShowLoginModal} 
-                        />
+                        <PortfolioView portfolioData={portfolioData} isScrolled={isScrolled} isLoggedInLocal={isLoggedInLocal} setView={setView} setShowLoginModal={setShowLoginModal} />
                     ) : (
-                        <AdminPanel 
-                            portfolioData={portfolioData}
-                            setView={setView}
-                            saveToCloud={saveToCloud}
-                            saveStatus={saveStatus}
-                            setIsLoggedInLocal={setIsLoggedInLocal}
-                            updateData={updateData}
-                            updateContact={updateContact}
-                            addItem={addItem}
-                            removeItem={removeItem}
-                            uploading={uploading}
-                            handlePdfUpload={handlePdfUpload}
-                        />
+                        <AdminPanel portfolioData={portfolioData} setView={setView} saveToCloud={saveToCloud} saveStatus={saveStatus} setIsLoggedInLocal={setIsLoggedInLocal} updateData={updateData} updateContact={updateContact} addItem={addItem} removeItem={removeItem} uploading={uploading} handlePdfUpload={handlePdfUpload} />
                     )}
 
                     <AnimatePresence>
                         {showLoginModal && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a051a]/95 backdrop-blur-xl p-6">
-                                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white p-12 rounded-[50px] w-full max-w-md shadow-2xl">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-2xl p-6">
+                                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white p-10 md:p-14 rounded-[60px] w-full max-w-md shadow-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-500 to-amber-500" />
                                     <div className="mb-10 text-center text-slate-900">
-                                        <div className="w-20 h-20 bg-rose-100 text-rose-500 rounded-[30px] flex items-center justify-center mx-auto mb-6 rotate-12"><Icon name="Settings" size={40} /></div>
-                                        <h2 className="text-4xl font-black italic uppercase">Admin Portal</h2>
+                                        <div className="w-20 h-20 bg-rose-100 text-rose-500 rounded-[35px] flex items-center justify-center mx-auto mb-8 rotate-6"><Icon name="Lock" size={40} /></div>
+                                        <h2 className="text-4xl font-black italic uppercase tracking-tighter">Admin Access</h2>
+                                        <p className="text-slate-400 font-bold text-sm mt-2 uppercase tracking-widest">Authorized personnel only</p>
                                     </div>
-                                    <form onSubmit={handleLogin} className="space-y-6 text-slate-900">
-                                        <input type="password" placeholder="Password rahasia..." className="w-full p-5 bg-slate-100 border-2 border-slate-100 rounded-[25px] focus:border-rose-500 outline-none text-center font-bold text-lg" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} autoFocus />
-                                        <button className="w-full py-5 bg-gradient-to-r from-rose-500 to-amber-500 text-white font-black rounded-[25px] shadow-xl shadow-rose-500/20 uppercase italic tracking-widest">Masuk</button>
-                                        <button type="button" onClick={() => setShowLoginModal(false)} className="w-full text-xs font-black uppercase text-slate-400 hover:text-rose-500 transition-colors">Batal</button>
+                                    <form onSubmit={(e) => { e.preventDefault(); if(loginPassword === "admin123"){ setIsLoggedInLocal(true); setShowLoginModal(false); setView('admin'); } else alert("Password Salah!"); }} className="space-y-6">
+                                        <input type="password" placeholder="••••••••" className="w-full p-6 bg-slate-100 border-2 border-slate-100 focus:border-rose-500 focus:bg-white outline-none rounded-[30px] text-center font-black text-2xl tracking-widest text-slate-900 transition-all" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} autoFocus />
+                                        <button className="w-full py-6 bg-gradient-to-r from-rose-500 to-orange-500 text-white font-black rounded-[30px] shadow-2xl shadow-rose-500/30 uppercase tracking-[0.1em] hover:scale-105 active:scale-95 transition-all">Unlock Portal</button>
+                                        <button type="button" onClick={() => setShowLoginModal(false)} className="w-full text-xs font-black uppercase text-slate-400 hover:text-rose-500 transition-colors">Go Back</button>
                                     </form>
                                 </motion.div>
                             </motion.div>
@@ -631,8 +715,7 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
